@@ -60,5 +60,5 @@ A port of [Moonlight Stream](https://moonlight-stream.org/) for playing games us
     3. Install dependencies: `.\vcpkg\vcpkg.exe install --triplet x64-uwp`
 3. Run x64 Visual Studio Prompt (Tools → Command Line → Developer Command Prompt)
     1. Run `generate-thirdparty-projects.bat` to generate `moonlight-common-c` VS project
-    2. Go to `libgamestream` and run `build-uwp.bat` to generate `libgamestream` VS project
+    2. Go to `libgamestream\build` and open and build the `libgamestream.sln` solution
 4. After all the actions above, you finally can open and build solution.
