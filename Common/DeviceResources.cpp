@@ -230,8 +230,8 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 
 	bool swapDimensions = displayRotation == DXGI_MODE_ROTATION_ROTATE90 || displayRotation == DXGI_MODE_ROTATION_ROTATE270;
 	//Get the correct screen resolution and adapt the swapchain to 16:9 aspect ratio
-	float normalizedWidth = uwp_get_width();
-	float normalizedHeight = uwp_get_height();
+	float normalizedWidth = static_cast<float>(uwp_get_width());
+	float normalizedHeight = static_cast<float>(uwp_get_height());
 	m_d3dRenderTargetSize.Width = normalizedWidth;
 	m_d3dRenderTargetSize.Height = normalizedHeight;
 	moonlight_xbox_dx::Utils::stats.outputW = m_d3dRenderTargetSize.Width;
@@ -469,14 +469,14 @@ void DX::DeviceResources::UpdateRenderTargetSize()
 {
 	auto state = GetApplicationState();
 	m_effectiveDpi = m_dpi;
-	double compositionScaleMultiplier = 1;
+	float compositionScaleMultiplier = 1.f;
 
 	Windows::Graphics::Display::Core::HdmiDisplayInformation^ hdi = Windows::Graphics::Display::Core::HdmiDisplayInformation::GetForCurrentView();
 	// HDR Setup
 	if (hdi) {
 		auto mode = hdi->GetCurrentDisplayMode();
-		if (mode->ResolutionWidthInRawPixels > 2560)compositionScaleMultiplier = 2;
-		else if (mode->ResolutionWidthInRawPixels > 1920)compositionScaleMultiplier = 1.33333333;
+		if (mode->ResolutionWidthInRawPixels > 2560) compositionScaleMultiplier = 2.f;
+		else if (mode->ResolutionWidthInRawPixels > 1920) compositionScaleMultiplier = 1.3333333f;
 	}
 
 	m_effectiveCompositionScaleX = m_compositionScaleX * compositionScaleMultiplier;

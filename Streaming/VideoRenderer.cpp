@@ -154,7 +154,7 @@ bool VideoRenderer::Render()
 		ID3D11Texture2D* ffmpegTexture = (ID3D11Texture2D*)(frame->data[0]);
 		D3D11_TEXTURE2D_DESC ffmpegDesc;
 		ffmpegTexture->GetDesc(&ffmpegDesc);
-		int index = (int)(frame->data[1]);
+		unsigned int index = static_cast<unsigned int>((intptr_t)frame->data[1]);
 		box.right = min(renderTextureDesc.Width, ffmpegDesc.Width);
 		box.bottom = min(renderTextureDesc.Height, ffmpegDesc.Height);
 		renderTextureDesc.Format = ffmpegDesc.Format;
@@ -270,8 +270,8 @@ void VideoRenderer::CreateDeviceDependentResources()
 	auto createCubeTask = (createVSTask && createPSTaskGen && createPSTaskBT601 && createPSTaskBT2020).then([this]() {
 		Windows::Graphics::Display::Core::HdmiDisplayInformation^ hdi = Windows::Graphics::Display::Core::HdmiDisplayInformation::GetForCurrentView();
 		auto w = CoreWindow::GetForCurrentThread();
-		int m_DisplayWidth = w->Bounds.Width;
-		int m_DisplayHeight = w->Bounds.Height;
+		int m_DisplayWidth = static_cast<int>(w->Bounds.Width);
+		int m_DisplayHeight = static_cast<int>(w->Bounds.Height);
 		// HDR Setup
 		if (hdi) {
 			m_lastDisplayMode = hdi->GetCurrentDisplayMode();
@@ -425,8 +425,8 @@ void VideoRenderer::ReleaseDeviceDependentResources()
 
 void VideoRenderer::scaleSourceToDestinationSurface(RECT* src, RECT* dst)
 {
-	int dstH = ceil((float)dst->w * src->h / src->w);
-	int dstW = ceil((float)dst->h * src->w / src->h);
+	int dstH = static_cast<int>(ceil((float)dst->w * src->h / src->w));
+	int dstW = static_cast<int>(ceil((float)dst->h * src->w / src->h));
 
 	if (dstH > dst->h) {
 		dst->x += (dst->w - dstW) / 2;

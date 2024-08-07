@@ -159,7 +159,7 @@ void moonlight_xbox_dx::HostSelectorPage::OnStateLoaded() {
 		}).then([this]() {
 			if (GetApplicationState()->autostartInstance.size() > 0) {
 				auto pii = Utils::StringFromStdString(GetApplicationState()->autostartInstance);
-				for (int i = 0; i < GetApplicationState()->SavedHosts->Size; i++) {
+				for (unsigned int i = 0; i < GetApplicationState()->SavedHosts->Size; i++) {
 					auto host = GetApplicationState()->SavedHosts->GetAt(i);
 					if (host->InstanceId->Equals(pii)) {
 						auto that = this;

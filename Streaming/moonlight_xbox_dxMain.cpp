@@ -93,7 +93,7 @@ void moonlight_xbox_dxMain::StartRenderLoop()
 			while (action->Status == AsyncStatus::Started)
 			{
 				critical_section::scoped_lock lock(m_criticalSection);
-				int t1 = GetTickCount64();
+				unsigned long long t1 = GetTickCount64();
 				Update();
 				if (Render())
 				{
@@ -150,8 +150,8 @@ void moonlight_xbox_dxMain::ProcessInput()
 	moonlightClient->SetGamepadCount(gamepads->Size);
 	auto state = GetApplicationState();
 	//Position
-	double multiplier = ((double)state->MouseSensitivity) / ((double)4.0f);
-	for (int i = 0; i < gamepads->Size; i++) {
+	float multiplier = ((float)state->MouseSensitivity) / ((float)4.0f);
+	for (unsigned int i = 0; i < gamepads->Size; i++) {
 		Windows::Gaming::Input::Gamepad^ gamepad = gamepads->GetAt(i);
 		auto reading = gamepad->GetCurrentReading();
 		//If this combination is pressed on gamed we should handle some magic things :)
@@ -225,20 +225,22 @@ void moonlight_xbox_dxMain::ProcessInput()
 			else if (isPressed(previousReading[i].Buttons, GamepadButtons::Menu)) {
 				moonlightClient->KeyUp((unsigned short)Windows::System::VirtualKey::Right, 0);
 			}
+
+			float rtY = static_cast<float>(reading.RightThumbstickY);
+			float rtX = static_cast<float>(reading.RightThumbstickX);
+
 			//Move with right stick
 			if (isPressed(reading.Buttons, GamepadButtons::LeftThumbstick)) {
-				moonlightClient->SendScroll(pow(reading.RightThumbstickY * multiplier * 2, 3));
-				moonlightClient->SendScrollH(pow(reading.RightThumbstickX * multiplier * 2, 3));
+				moonlightClient->SendScroll(powf(rtY * multiplier * 2, 3));
+				moonlightClient->SendScrollH(powf(rtX * multiplier * 2, 3));
 			}
 			else {
 				//Move with right stick instead of the left one in KB mode
-				double x = reading.RightThumbstickX;
-				if (abs(x) < 0.1) x = 0;
-				else x = x + (x > 0 ? 1 : -1); //Add 1 to make sure < 0 values do not make everything broken
-				double y = reading.RightThumbstickY;
-				if (abs(y) < 0.1) y = 0;
-				else y = (y * -1) + (y > 0 ? -1 : 1); //Add 1 to make sure < 0 values do not make everything broken
-				moonlightClient->SendMousePosition(pow(x * multiplier, 3), pow(y * multiplier, 3));
+				if (abs(rtX) < 0.1) rtX = 0;
+				else rtX = rtX + (rtX > 0 ? 1 : -1); //Add 1 to make sure < 0 values do not make everything broken
+				if (abs(rtY) < 0.1) rtY = 0;
+				else rtY = (rtY * -1) + (rtY > 0 ? -1 : 1); //Add 1 to make sure < 0 values do not make everything broken
+				moonlightClient->SendMousePosition(powf(rtX * multiplier, 3), powf(rtY * multiplier, 3));
 			}
 			if (reading.LeftTrigger > 0.25 && previousReading[i].LeftTrigger < 0.25) {
 				moonlightClient->SendMousePressed(BUTTON_LEFT);
@@ -256,14 +258,14 @@ void moonlight_xbox_dxMain::ProcessInput()
 		else if (mouseMode) {
 			auto state = GetApplicationState();
 			//Position
-			double multiplier = ((double)state->MouseSensitivity) / ((double)4.0f);
-			double x = reading.LeftThumbstickX;
+			float multiplier = ((float)state->MouseSensitivity) / (4.0f);
+			float x = static_cast<float>(reading.LeftThumbstickX);
 			if (abs(x) < 0.1) x = 0;
 			else x = x + (x > 0 ? 1 : -1); //Add 1 to make sure < 0 values do not make everything broken
-			double y = reading.LeftThumbstickY;
+			float y = static_cast<float>(reading.LeftThumbstickY);
 			if (abs(y) < 0.1) y = 0;
 			else y = (y * -1) + (y > 0 ? -1 : 1); //Add 1 to make sure < 0 values do not make everything broken
-			moonlightClient->SendMousePosition(pow(x * multiplier, 3), pow(y * multiplier, 3));
+			moonlightClient->SendMousePosition(powf(x * multiplier, 3), powf(y * multiplier, 3));
 			//Left Click
 			if (isPressed(reading.Buttons, GamepadButtons::A) && !isPressed(previousReading[i].Buttons, GamepadButtons::A)) {
 				moonlightClient->SendMousePressed(BUTTON_LEFT);
@@ -305,8 +307,8 @@ void moonlight_xbox_dxMain::ProcessInput()
 				}
 			}
 			//Scroll
-			moonlightClient->SendScroll(pow(reading.RightThumbstickY * multiplier * 2, 3));
-			moonlightClient->SendScrollH(pow(reading.RightThumbstickX * multiplier * 2, 3));
+			moonlightClient->SendScroll(powf(static_cast<float>(reading.RightThumbstickY)* multiplier * 2, 3));
+			moonlightClient->SendScrollH(powf(static_cast<float>(reading.RightThumbstickX)* multiplier * 2, 3));
 			//Xbox/Guide Button
 			//Right Click
 			if (isPressed(reading.Buttons, GamepadButtons::B) && !isPressed(previousReading[i].Buttons, GamepadButtons::B)) {

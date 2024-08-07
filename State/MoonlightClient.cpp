@@ -230,7 +230,7 @@ bool MoonlightClient::IsPaired() {
 }
 
 char* MoonlightClient::GeneratePIN() {
-	srand(time(NULL));
+	srand(static_cast<unsigned int>(time(NULL)));
 	if (connectionPin == NULL)connectionPin = (char*)malloc(5 * sizeof(char));
 	sprintf(connectionPin, "%d%d%d%d", rand() % 10, rand() % 10, rand() % 10, rand() % 10);
 	return connectionPin;
@@ -285,7 +285,7 @@ std::vector<MoonlightApp^> MoonlightClient::GetApplications() {
 	Concurrency::create_task([folder, folderString, values, this]() {
 		for (auto a : values) {
 			auto imgPath = folderString->Concat(folderString, a->Id + ".png");
-		https://stackoverflow.com/a/6218957
+			// https://stackoverflow.com/a/6218957
 			DWORD dwAttrib = GetFileAttributes(imgPath->Data());
 			if (dwAttrib == INVALID_FILE_ATTRIBUTES) {
 				gs_appasset(&serverData, folder, a->Id);
@@ -317,7 +317,7 @@ void MoonlightClient::SendGuide(int controllerNumber, bool s) {
 
 
 void MoonlightClient::SendMousePosition(float deltaX, float deltaY) {
-	LiSendMouseMoveEvent(deltaX, deltaY);
+	LiSendMouseMoveEvent(static_cast<short>(deltaX), static_cast<short>(deltaY));
 }
 
 void MoonlightClient::SendMousePressed(int button) {

@@ -68,14 +68,14 @@ namespace moonlight_xbox_dx {
 	}
 
 	int AudioPlayer::Init(int audioConfiguration, const POPUS_MULTISTREAM_CONFIGURATION opusConfig, void* mnlContext, int arFlags) {
-		HRESULT hr;
+		// HRESULT hr;
 		int rc;
 		decoder = opus_multistream_decoder_create(opusConfig->sampleRate, opusConfig->channelCount, opusConfig->streams, opusConfig->coupledStreams, opusConfig->mapping, &rc);
 		if (rc != 0) {
 			return rc;
 		}
 		if (!contexted) {
-			ma_result result;
+			// ma_result result;
 			ma_device_config deviceConfig;
 			deviceConfig = ma_device_config_init(ma_device_type_playback);
 			deviceConfig.playback.format = ma_format_s16;
@@ -111,7 +111,7 @@ namespace moonlight_xbox_dx {
 
 	int AudioPlayer::SubmitDU(char* sampleData, int sampleLength) {
 		int desiredSize = sizeof(short) * this->samplePerFrame * this->channelCount;
-		HRESULT hr;
+		// HRESULT hr;
 		int decodeLen = opus_multistream_decode(decoder,(unsigned char*)sampleData, sampleLength,pcmBuffer, 240, 0);
 		if (decodeLen > 0) {
 			void* buffer;

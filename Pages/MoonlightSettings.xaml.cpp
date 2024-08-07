@@ -38,7 +38,7 @@ MoonlightSettings::MoonlightSettings()
 	
 	Windows::UI::ViewManagement::ApplicationView::GetForCurrentView()->SetDesiredBoundsMode(Windows::UI::ViewManagement::ApplicationViewBoundsMode::UseCoreWindow);
 	auto iid = Utils::StringFromStdString(state->autostartInstance);
-	for (int i = 0; i < state->SavedHosts->Size;i++) {
+	for (unsigned int i = 0; i < state->SavedHosts->Size;i++) {
 		auto host = state->SavedHosts->GetAt(i);
 		auto item = ref new ComboBoxItem();
 		item->Content = host->LastHostname;

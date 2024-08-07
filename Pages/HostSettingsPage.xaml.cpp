@@ -56,7 +56,7 @@ void HostSettingsPage::OnNavigatedTo(Windows::UI::Xaml::Navigation::NavigationEv
 	AvailableAudioConfigs->Append("Surround 5.1");
 	AvailableAudioConfigs->Append("Surround 7.1");
 	CurrentResolutionIndex = 0;
-	for (int i = 0; i < AvailableResolutions->Size; i++) {
+	for (unsigned int i = 0; i < AvailableResolutions->Size; i++) {
 		if (host->Resolution->Width == AvailableResolutions->GetAt(i)->Width &&
 			host->Resolution->Height == AvailableResolutions->GetAt(i)->Height
 			) {
@@ -68,7 +68,7 @@ void HostSettingsPage::OnNavigatedTo(Windows::UI::Xaml::Navigation::NavigationEv
 	auto item = ref new ComboBoxItem();
 	item->Content = L"No App";
 	AutoStartSelector->Items->Append(item);
-	for (int i = 0; i < Host->Apps->Size; i++) {
+	for (unsigned int i = 0; i < Host->Apps->Size; i++) {
 		auto item = ref new ComboBoxItem();
 		item->Content = Host->Apps->GetAt(i)->Name;
 		AutoStartSelector->Items->Append(item);
@@ -111,7 +111,7 @@ void moonlight_xbox_dx::HostSettingsPage::ResolutionSelector_SelectionChanged(Pl
 void moonlight_xbox_dx::HostSettingsPage::AutoStartSelector_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e)
 {
 	int index = AutoStartSelector->SelectedIndex - 1;
-	if (index >= 0 && host->Apps->Size > index) {
+	if (index >= 0 && (int) host->Apps->Size > index) {
 		host->AutostartID = host->Apps->GetAt(index)->Id;
 	}
 	else {

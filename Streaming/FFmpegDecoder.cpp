@@ -219,7 +219,7 @@ namespace moonlight_xbox_dx {
 
 		pkt.data = indata;
 		pkt.size = inlen;
-		int ts = GetTickCount64();
+		unsigned long long ts = GetTickCount64();
 		err = avcodec_send_packet(decoder_ctx, &pkt);
 		if (err < 0) {
 
