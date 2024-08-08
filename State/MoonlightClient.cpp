@@ -61,7 +61,7 @@ int MoonlightClient::StartStreaming(std::shared_ptr<DX::DeviceResources> res, St
 			if (sConfig->enableHDR) {
 				config.supportedVideoFormats |= VIDEO_FORMAT_H265_MAIN10;
 				config.colorSpace = COLORSPACE_REC_2020;
-				config.colorRange = COLOR_RANGE_FULL;
+				config.colorRange = COLOR_RANGE_LIMITED;
 			}
 		}
 	}

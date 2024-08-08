@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "moonlight_xbox_dxMain.h"
+#include "FFmpegDecoder.h"
 #include "Common\DirectXHelper.h"
 #include "Utils.hpp"
 #include <Pages/StreamPage.xaml.h>
@@ -95,9 +96,16 @@ void moonlight_xbox_dxMain::StartRenderLoop()
 				critical_section::scoped_lock lock(m_criticalSection);
 				int t1 = GetTickCount64();
 				Update();
-				if (Render())
+
+				FFMpegDecoder* decoder = FFMpegDecoder::getInstance();
+				if (decoder != nullptr)
 				{
-					m_deviceResources->Present();
+					decoder->mutex.lock();
+					if (Render())
+					{
+						m_deviceResources->Present();
+					}
+					decoder->mutex.unlock();
 				}
 			}
 		});
@@ -351,8 +359,8 @@ bool moonlight_xbox_dxMain::Render()
 
 	bool shouldPresent = m_sceneRenderer->Render();
 	// Render the scene objects.
-	m_fpsTextRenderer->Render();
-	m_statsTextRenderer->Render();
+	//m_fpsTextRenderer->Render();
+	//m_statsTextRenderer->Render();
 
 	return shouldPresent;
 }

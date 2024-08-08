@@ -33,13 +33,12 @@ namespace moonlight_xbox_dx
 		int videoFormat,width,height;
 
 	private:
-		int Decode(unsigned char* indata, int inlen);
-		AVPacket pkt;
+		int Decode(AVPacket* pkt);
+		AVPacket* pkt;
 		const AVCodec* decoder;
 		AVCodecContext* decoder_ctx;
 		AVHWDeviceContext* device_ctx;
 		AVD3D11VADeviceContext* d3d11va_device_ctx;
-		unsigned char* ffmpeg_buffer;
 		int dec_frames_cnt;
 		AVFrame** dec_frames;
 		AVFrame** ready_frames;

@@ -52,6 +52,12 @@ namespace moonlight_xbox_dx {
 		//if (level > AV_LOG_INFO)return;
 		char message[2048];
 		vsprintf_s(message, fmt, vl);
+		assert(strlen(message) < 2048);
+
+		if (std::string(message).find("UNSPEC") != std::string::npos) {
+			Utils::Log("POSSIBLY BAD FRAME DETECTED\n");
+		}
+
 		OutputDebugStringA("[FFMPEG]");
 		OutputDebugStringA(message);
 		if (level <= AV_LOG_INFO) {
@@ -62,6 +68,9 @@ namespace moonlight_xbox_dx {
 	}
 
 	int FFMpegDecoder::Init(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
+		OutputDebugStringA("Init");
+		Utils::Log("Init\n");
+		
 		this->videoFormat = videoFormat;
 		this->width = width;
 		this->height = height;
@@ -69,10 +78,8 @@ namespace moonlight_xbox_dx {
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58,10,100)
 		avcodec_register_all();
 #endif
-		av_log_set_level(AV_LOG_VERBOSE);
+		av_log_set_level(AV_LOG_TRACE);
 		av_log_set_callback(&ffmpeg_log_callback);
-#pragma warning(suppress : 4996)
-		av_init_packet(&pkt);
 
 		if (videoFormat & VIDEO_FORMAT_MASK_H264) {
 			decoder = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -95,7 +102,7 @@ namespace moonlight_xbox_dx {
 		}
 		decoder_ctx->opaque = this;
 		
-		AVBufferRef* hw_device_ctx = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA);
+		AVBufferRef* hw_device_ctx = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA); //try AV_HWDEVICE_TYPE_DXVA2?
 		device_ctx = reinterpret_cast<AVHWDeviceContext*>(hw_device_ctx->data);
 		d3d11va_device_ctx = reinterpret_cast<AVD3D11VADeviceContext*>(device_ctx->hwctx);
 		d3d11va_device_ctx->device = this->resources->GetD3DDevice();
@@ -119,18 +126,15 @@ namespace moonlight_xbox_dx {
 		decoder_ctx->height = height;
 		decoder_ctx->get_format = ffGetFormat;
 
+		decoder_ctx->error_concealment = 0; // FF_EC_GUESS_MVS | FF_EC_DEBLOCK;
+		decoder_ctx->err_recognition = AV_EF_AGGRESSIVE | AV_EF_EXPLODE;
+
 		int err = avcodec_open2(decoder_ctx, decoder, NULL);
 		if (err < 0) {
 			char msg[2048];
 			sprintf(msg, "Failed to create FFMpeg Codec: %d\n", err);
 			Utils::Log(msg);
 			return err;
-		}
-		ffmpeg_buffer = (unsigned char*)malloc(DECODER_BUFFER_SIZE + AV_INPUT_BUFFER_PADDING_SIZE);
-		if (ffmpeg_buffer == NULL) {
-			Utils::Log("OOM\n");
-			Cleanup();
-			return -1;
 		}
 		int buffer_count = 2;
 		dec_frames_cnt = buffer_count;
@@ -153,6 +157,9 @@ namespace moonlight_xbox_dx {
 				return -1;
 			}
 		}
+
+		pkt = av_packet_alloc();
+
 		GAMING_DEVICE_MODEL_INFORMATION info = {};
 		GetGamingDeviceModelInformation(&info);
 		if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT &&
@@ -179,17 +186,28 @@ namespace moonlight_xbox_dx {
 			av_frame_free(&dec_frames[i]);
 		}
 		free(dec_frames);
-		free(ffmpeg_buffer);
-		avcodec_close(decoder_ctx);
 		avcodec_free_context(&decoder_ctx);
+		av_packet_free(&pkt);
 		Utils::Log("Decoding Clean\n");
+	}
+
+	void LogDecodeUnitInfo(PDECODE_UNIT decodeUnit) {
+		char msg[2048];
+		sprintf(msg, "Decode Unit Info: fullLength: %d, frameType: %d, frameNumber: %d\n", decodeUnit->fullLength, decodeUnit->frameType, decodeUnit->frameNumber);
+		Utils::Log(msg);
 	}
 
 	bool FFMpegDecoder::SubmitDU() {
 		PDECODE_UNIT decodeUnit = nullptr;
 		VIDEO_FRAME_HANDLE frameHandle = nullptr;
 		bool status = LiWaitForNextVideoFrame(&frameHandle, &decodeUnit);
-		if (status == false)return false;
+		if (status == false) {
+			Utils::Log("No Frame to decode\n");
+			return false;
+		}
+
+		LogDecodeUnitInfo(decodeUnit);
+
 		int n = LiGetPendingVideoFrames();
 		Utils::stats.queueSize = n;
 		if (decodeUnit->fullLength > DECODER_BUFFER_SIZE) {
@@ -197,15 +215,34 @@ namespace moonlight_xbox_dx {
 			LiCompleteVideoFrame(frameHandle, DR_NEED_IDR);
 			return false;
 		}
-		PLENTRY entry = decodeUnit->bufferList;
+
 		uint32_t length = 0;
-		while (entry != NULL) {
-			memcpy(ffmpeg_buffer + length, entry->data, entry->length);
+
+		for (PLENTRY entry = decodeUnit->bufferList; entry != nullptr; entry = entry->next) {
 			length += entry->length;
-			entry = entry->next;
 		}
+		length += AV_INPUT_BUFFER_PADDING_SIZE;
+		assert(length == decodeUnit->fullLength + AV_INPUT_BUFFER_PADDING_SIZE);
+
+		av_new_packet(pkt, length);
+
+		uint8_t* dst = pkt->data;
+		for (PLENTRY entry = decodeUnit->bufferList; entry != nullptr; entry = entry->next) {
+			memcpy(dst, entry->data, entry->length);
+			dst += entry->length;
+		}
+		memset(dst, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+
+		if (decodeUnit->frameType == FRAME_TYPE_IDR) {
+			pkt->flags = AV_PKT_FLAG_KEY;
+		}
+		else {
+			pkt->flags = 0;
+		}
+
 		int err;
-		err = Decode(ffmpeg_buffer, length);
+		err = Decode(pkt);
+		av_packet_unref(pkt);
 		if (err < 0) {
 			LiCompleteVideoFrame(frameHandle, DR_NEED_IDR);
 			return false;
@@ -214,13 +251,32 @@ namespace moonlight_xbox_dx {
 		return true;
 	}
 
-	int FFMpegDecoder::Decode(unsigned char* indata, int inlen) {
+	void LogPacketInfo(AVPacket* pkt) {
+		char msg[2048];
+		sprintf(msg, "Packet Info: pts: %lld, dts: %lld, duration: %d, size: %d\n", pkt->pts, pkt->dts, pkt->duration, pkt->size);
+		Utils::Log(msg);
+	}
+
+	void LogFrameInfo(AVFrame* frame) {
+		char msg[2048];
+		sprintf(msg, "Frame Info: pts: %lld, pkt_dts: %lld, width: %d, height: %d, error flags: %d, flags: %d, duration: %lld \n", frame->pts, frame->pkt_dts, frame->width, frame->height, frame->decode_error_flags, frame->flags, frame->duration);
+		Utils::Log(msg);
+	}
+
+	int FFMpegDecoder::Decode(AVPacket* pkt) {
 		int err;
 
+<<<<<<< Updated upstream
 		pkt.data = indata;
 		pkt.size = inlen;
 		int ts = GetTickCount64();
 		err = avcodec_send_packet(decoder_ctx, &pkt);
+=======
+		unsigned long long ts = GetTickCount64();
+		err = avcodec_send_packet(decoder_ctx, pkt);
+		LogPacketInfo(pkt);
+		
+>>>>>>> Stashed changes
 		if (err < 0) {
 
 			char errorstringnew[2048], ffmpegError[1024];
@@ -234,20 +290,39 @@ namespace moonlight_xbox_dx {
 
 	AVFrame* FFMpegDecoder::GetFrame() {
 		int err = avcodec_receive_frame(decoder_ctx, dec_frames[next_frame]);
+		LogFrameInfo(dec_frames[next_frame]);
 		if (err != 0 && err != AVERROR(EAGAIN)) {
 			char errorstringnew[1024];
 			sprintf(errorstringnew, "Error avcodec_receive_frame: %d\n", AVERROR(err));
 			Utils::Log(errorstringnew);
+
+			LiRequestIdrFrame(); //If we have an error, we need to flush the decoder
 			return nullptr;
 		}
 		if (err == 0) {
 			//Smooth stream but keep queue small
-			if (LiGetPendingVideoFrames() > 1)return nullptr;
+			int queuedFrames = LiGetPendingVideoFrames();
+			if (queuedFrames > 1)
+			{
+				char errorstringnew[1024];
+				sprintf(errorstringnew, "Queued frames: %d\n", queuedFrames);
+				Utils::Log(errorstringnew);
+				return nullptr;
+			}
 			//Not the best way to handle this. BUT IT DOES FIX XBOX ONES!!!!
 			//Honestly this did take too much time of my life to care to make a better version
 			//If you want to fix this, have fun! (And hopefully you have Microsoft blessing/tools/support for that)
 			if (hackWait && LiGetPendingVideoFrames() < 2)moonlight_xbox_dx::usleep(12000);
 			AVFrame* frame = dec_frames[next_frame];
+
+			static int gotFrames = 0;
+			gotFrames++;
+			if (gotFrames > 1000)
+			{
+				gotFrames = 0;
+				//LiRequestIdrFrame(); // Just ask for an idr frame to 'fix' the weird corruption issue
+			}
+
 			return frame;
 		}
 		return nullptr;
@@ -295,7 +370,7 @@ namespace moonlight_xbox_dx {
 		decoder_callbacks_sdl.stop = stopCallback;
 		decoder_callbacks_sdl.cleanup = cleanupCallback;
 		decoder_callbacks_sdl.submitDecodeUnit = NULL;
-		decoder_callbacks_sdl.capabilities = CAPABILITY_PULL_RENDERER;
+		decoder_callbacks_sdl.capabilities = CAPABILITY_PULL_RENDERER | CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC | CAPABILITY_SLICES_PER_FRAME(4);
 		return decoder_callbacks_sdl;
 	}
 

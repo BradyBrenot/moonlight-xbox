@@ -47,6 +47,9 @@ namespace moonlight_xbox_dx
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 		Microsoft::WRL::ComPtr<ID3D11SamplerState>	samplerState;
 		D3D11_TEXTURE2D_DESC						renderTextureDesc;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D>		m_renderTexture;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_luminance_shader_resource_view;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_chrominance_shader_resource_view;
 		Windows::Graphics::Display::Core::HdmiDisplayMode^ m_lastDisplayMode;
 		Windows::Graphics::Display::Core::HdmiDisplayMode^ m_currentDisplayMode;
 

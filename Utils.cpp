@@ -24,6 +24,7 @@ namespace moonlight_xbox_dx {
 		}
 
 		void Log(const char* fmt) {
+<<<<<<< Updated upstream
 			try {
 				if (fmt == nullptr || fmt == NULL)return;
 				int len = strlen(fmt) + 1;
@@ -40,6 +41,20 @@ namespace moonlight_xbox_dx {
 			catch (...){
 
 			}
+=======
+			if (fmt == nullptr) return;
+			size_t len = strlen(fmt) + 1;
+			wchar_t* stringBuf = (wchar_t*)malloc(sizeof(wchar_t) * len);
+			if (stringBuf == NULL)return;
+			mbstowcs(stringBuf, fmt, len);
+			std::wstring string(stringBuf);
+			free(stringBuf);
+			logMutex.lock();
+			if (logLines.size() == LOG_LINES)logLines.erase(logLines.begin());
+			logLines.push_back(string);
+			logMutex.unlock();
+			OutputDebugStringA(fmt);
+>>>>>>> Stashed changes
 		}
 
 		std::vector<std::wstring> GetLogLines() {

@@ -121,8 +121,9 @@ bool VideoRenderer::Render()
 	{
 		return true;
 	}
-	//Create a rendering texture
+
 	LARGE_INTEGER start;
+
 	QueryPerformanceCounter(&start);
 	FFMpegDecoder::getInstance()->shouldUnlock = false;
 	if (!FFMpegDecoder::getInstance()->SubmitDU()) {
@@ -134,7 +135,18 @@ bool VideoRenderer::Render()
 		UpdateStats(start);
 		return false;
 	}
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> renderTexture;
+
+	FFMpegDecoder::getInstance()->mutex.lock();
+	FFMpegDecoder::getInstance()->shouldUnlock = true;
+	ID3D11Texture2D* ffmpegTexture = (ID3D11Texture2D*)(frame->data[0]);
+	D3D11_TEXTURE2D_DESC ffmpegDesc;
+	ffmpegTexture->GetDesc(&ffmpegDesc);
+
+	if (ffmpegDesc.Width == 0 || ffmpegDesc.Height == 0) {
+		FFMpegDecoder::getInstance()->mutex.unlock();
+		return false;
+	}
+
 	D3D11_BOX box;
 	box.left = 0;
 	box.top = 0;
@@ -142,12 +154,14 @@ bool VideoRenderer::Render()
 	box.bottom = renderTextureDesc.Height;
 	box.front = 0;
 	box.back = 1;
-	if (frame->format != AV_PIX_FMT_D3D11) {
-		char msg[2048];
-		sprintf_s(msg, "Pixel format mismatch - got %d instead of D3D11!\n", frame->format);
-		Utils::Log(msg);
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateTexture2D(&renderTextureDesc, NULL, renderTexture.GetAddressOf()), "Render Texture Creation");
+
+
+	if (m_renderTexture.Get() != nullptr && renderTextureDesc.Format != ffmpegDesc.Format) {
+		m_renderTexture.Reset();
+		m_luminance_shader_resource_view.Reset();
+		m_chrominance_shader_resource_view.Reset();
 	}
+<<<<<<< Updated upstream
 	else {
 		FFMpegDecoder::getInstance()->mutex.lock();
 		FFMpegDecoder::getInstance()->shouldUnlock = true;
@@ -160,7 +174,28 @@ bool VideoRenderer::Render()
 		renderTextureDesc.Format = ffmpegDesc.Format;
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateTexture2D(&renderTextureDesc, NULL, renderTexture.GetAddressOf()), "Render Texture Creation");
 		m_deviceResources->GetD3DDeviceContext()->CopySubresourceRegion(renderTexture.Get(), 0, 0, 0, 0, ffmpegTexture, index, &box);
+=======
+
+	if (m_renderTexture.Get() == nullptr) {
+		//Create a rendering texture
+		if (frame->format != AV_PIX_FMT_D3D11) {
+			char msg[2048];
+			sprintf_s(msg, "Pixel format mismatch - got %d instead of D3D11!\n", frame->format);
+			Utils::Log(msg);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateTexture2D(&renderTextureDesc, NULL, m_renderTexture.GetAddressOf()), "Render Texture Creation");
+		}
+		else {
+			renderTextureDesc.Format = ffmpegDesc.Format;
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateTexture2D(&renderTextureDesc, NULL, m_renderTexture.GetAddressOf()), "Render Texture Creation");
+		}
+>>>>>>> Stashed changes
 	}
+
+	unsigned int index = static_cast<unsigned int>((intptr_t)frame->data[1]);
+	box.right = min(renderTextureDesc.Width, ffmpegDesc.Width);
+	box.bottom = min(renderTextureDesc.Height, ffmpegDesc.Height);
+
+	m_deviceResources->GetD3DDeviceContext()->CopySubresourceRegion(m_renderTexture.Get(), 0, 0, 0, 0, ffmpegTexture, index, &box);
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 	UINT stride = sizeof(VERTEX);
@@ -180,15 +215,17 @@ bool VideoRenderer::Render()
 	// Attach our vertex shader.
 	context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_luminance_shader_resource_view;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_chrominance_shader_resource_view;
-	D3D11_SHADER_RESOURCE_VIEW_DESC luminance_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(renderTexture.Get(), D3D11_SRV_DIMENSION_TEXTURE2D, (renderTextureDesc.Format == DXGI_FORMAT_P010) ? DXGI_FORMAT_R16_UNORM : DXGI_FORMAT_R8_UNORM);
-	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateShaderResourceView(renderTexture.Get(), &luminance_desc, m_luminance_shader_resource_view.GetAddressOf()), "Luminance SRV Creation");
-	D3D11_SHADER_RESOURCE_VIEW_DESC chrominance_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(renderTexture.Get(), D3D11_SRV_DIMENSION_TEXTURE2D, (renderTextureDesc.Format == DXGI_FORMAT_P010) ? DXGI_FORMAT_R16G16_UNORM : DXGI_FORMAT_R8G8_UNORM);
-	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateShaderResourceView(renderTexture.Get(), &chrominance_desc, m_chrominance_shader_resource_view.GetAddressOf()), "Chrominance SRV Creation");
+	if (m_luminance_shader_resource_view.Get() == nullptr)
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC luminance_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(m_renderTexture.Get(), D3D11_SRV_DIMENSION_TEXTURE2D, (renderTextureDesc.Format == DXGI_FORMAT_P010) ? DXGI_FORMAT_R16_UNORM : DXGI_FORMAT_R8_UNORM);
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateShaderResourceView(m_renderTexture.Get(), &luminance_desc, m_luminance_shader_resource_view.GetAddressOf()), "Luminance SRV Creation");
+		D3D11_SHADER_RESOURCE_VIEW_DESC chrominance_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(m_renderTexture.Get(), D3D11_SRV_DIMENSION_TEXTURE2D, (renderTextureDesc.Format == DXGI_FORMAT_P010) ? DXGI_FORMAT_R16G16_UNORM : DXGI_FORMAT_R8G8_UNORM);
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateShaderResourceView(m_renderTexture.Get(), &chrominance_desc, m_chrominance_shader_resource_view.GetAddressOf()), "Chrominance SRV Creation");
+	}
+
 	m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources(0, 1, m_luminance_shader_resource_view.GetAddressOf());
 	m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources(1, 1, m_chrominance_shader_resource_view.GetAddressOf());
-	
+
 	this->bindColorConversion(frame);
 
 	m_deviceResources->GetD3DDeviceContext()->DrawIndexed(6, 0, 0);
@@ -377,6 +414,14 @@ void VideoRenderer::CreateDeviceDependentResources()
 	renderTextureDesc.SampleDesc.Count = 1;
 	renderTextureDesc.CPUAccessFlags = 0;
 	renderTextureDesc.MiscFlags = 0;
+
+
+	if (m_renderTexture.Get() != nullptr) {
+		m_renderTexture.Reset();
+		m_luminance_shader_resource_view.Reset();
+		m_chrominance_shader_resource_view.Reset();
+	}
+
 	Microsoft::WRL::ComPtr<IDXGIResource1> dxgiResource;
 	createCubeTask.then([this, width, height]() {
 		int status = client->StartStreaming(m_deviceResources, configuration);
