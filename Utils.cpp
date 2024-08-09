@@ -7,7 +7,17 @@ namespace moonlight_xbox_dx {
 	namespace Utils {
 		void StreamingStats::LoopStarted() {
 			QueryPerformanceCounter(&_loopStart);
+			_gotPacketThisLoop = false;
+			_gotFrameThisLoop = false;
 			_frameRenderedThisLoop = false;
+		}
+
+		void StreamingStats::GotPacket() {
+			_gotPacketThisLoop = true;
+		}
+
+		void StreamingStats::GotFrame() {
+			_gotFrameThisLoop = true;
 		}
 
 		void StreamingStats::FrameRendered() {
@@ -24,7 +34,9 @@ namespace moonlight_xbox_dx {
 
 			if (_frameRenderedThisLoop) {
 				renderToRenderMs = 0.5 * accumulatedRenderToRenderMs + 0.5 * renderToRenderMs;
+				renderToRenderSansPresentTimeMs = renderToRenderMs - presentTime;
 				accumulatedRenderToRenderMs = 0;
+				overheadMs = renderToRenderMs - waitForNextFrameMs - decodeMs - receiveFrameMs - presentTime;
 			}
 		}
 

@@ -188,8 +188,12 @@ namespace moonlight_xbox_dx {
 	bool FFMpegDecoder::SubmitDU() {
 		PDECODE_UNIT decodeUnit = nullptr;
 		VIDEO_FRAME_HANDLE frameHandle = nullptr;
-		bool status = LiWaitForNextVideoFrame(&frameHandle, &decodeUnit);
-		if (status == false)return false;
+		bool status;
+		{
+			Utils::ScopedStatTimer<> waitForFrameTimer(Utils::stats.waitForNextFrameMs);
+			status = LiWaitForNextVideoFrame(&frameHandle, &decodeUnit);
+		}
+		if (status == false) return false;
 		int n = LiGetPendingVideoFrames();
 		Utils::stats.queueSize = n;
 		if (decodeUnit->fullLength > DECODER_BUFFER_SIZE) {
@@ -197,6 +201,9 @@ namespace moonlight_xbox_dx {
 			LiCompleteVideoFrame(frameHandle, DR_NEED_IDR);
 			return false;
 		}
+
+		Utils::stats.GotPacket();
+
 		PLENTRY entry = decodeUnit->bufferList;
 		uint32_t length = 0;
 		while (entry != NULL) {
@@ -220,7 +227,12 @@ namespace moonlight_xbox_dx {
 		pkt.data = indata;
 		pkt.size = inlen;
 		unsigned long long ts = GetTickCount64();
-		err = avcodec_send_packet(decoder_ctx, &pkt);
+
+		{
+			Utils::ScopedStatTimer<> decodeTimer(Utils::stats.decodeMs);
+			err = avcodec_send_packet(decoder_ctx, &pkt);
+		}
+		
 		if (err < 0) {
 
 			char errorstringnew[2048], ffmpegError[1024];
@@ -233,7 +245,12 @@ namespace moonlight_xbox_dx {
 	}
 
 	AVFrame* FFMpegDecoder::GetFrame() {
-		int err = avcodec_receive_frame(decoder_ctx, dec_frames[next_frame]);
+		int err;
+		{
+			Utils::ScopedStatTimer<> decodeTimer(Utils::stats.receiveFrameMs);
+			err = avcodec_receive_frame(decoder_ctx, dec_frames[next_frame]);
+		}
+		
 		if (err != 0 && err != AVERROR(EAGAIN)) {
 			char errorstringnew[1024];
 			sprintf(errorstringnew, "Error avcodec_receive_frame: %d\n", AVERROR(err));
@@ -241,6 +258,7 @@ namespace moonlight_xbox_dx {
 			return nullptr;
 		}
 		if (err == 0) {
+			Utils::stats.GotFrame();
 			//Smooth stream but keep queue small
 			if (LiGetPendingVideoFrames() > 1)return nullptr;
 			//Not the best way to handle this. BUT IT DOES FIX XBOX ONES!!!!

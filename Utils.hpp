@@ -17,13 +17,23 @@ namespace moonlight_xbox_dx {
 			double renderDecodeLoopMs = 0; // Average time to run the main loop
 			double renderToRenderMs = 0; // Average time between rendering frames (actual displayed FPS)
 			double presentTime = 0; // Average time to present a frame
+			double renderToRenderSansPresentTimeMs = 0;
+
+			double waitForNextFrameMs = 0;
+			double decodeMs = 0;
+			double receiveFrameMs = 0;
+			double overheadMs = 0;
 
 			void LoopStarted();
+			void GotPacket();
+			void GotFrame();
 			void FrameRendered();
 			void LoopEnded();
 
 		private:
 			bool _frameRenderedThisLoop = false;
+			bool _gotPacketThisLoop = false;
+			bool _gotFrameThisLoop = false;
 			LARGE_INTEGER _loopStart;
 			double accumulatedRenderToRenderMs = 0;
 		};
