@@ -32,6 +32,8 @@ namespace moonlight_xbox_dx
 		bool hackWait = false;
 		int videoFormat,width,height;
 
+		bool IsHwAccelerated();
+
 	private:
 		int Decode(unsigned char* indata, int inlen);
 		AVPacket pkt;

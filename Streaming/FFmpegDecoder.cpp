@@ -54,7 +54,7 @@ namespace moonlight_xbox_dx {
 		vsprintf_s(message, fmt, vl);
 		OutputDebugStringA("[FFMPEG]");
 		OutputDebugStringA(message);
-		if (level <= AV_LOG_INFO) {
+		if (level <= AV_LOG_TRACE) {
 			Utils::Log("[FFMPEG]");
 			Utils::Log(message);
 			Utils::Log("\n");
@@ -114,7 +114,17 @@ namespace moonlight_xbox_dx {
 		
 		decoder_ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx);
 		decoder_ctx->pix_fmt = AV_PIX_FMT_D3D11;
-		decoder_ctx->sw_pix_fmt = (videoFormat & VIDEO_FORMAT_MASK_10BIT) ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
+
+		if (videoFormat & VIDEO_FORMAT_MASK_YUV444)
+		{
+			// We only support 10-bit 444
+			decoder_ctx->sw_pix_fmt = AV_PIX_FMT_YUV444P10LE;
+		}
+		else
+		{
+			decoder_ctx->sw_pix_fmt = (videoFormat & VIDEO_FORMAT_MASK_10BIT) ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
+		}
+		
 		decoder_ctx->width = width;
 		decoder_ctx->height = height;
 		decoder_ctx->get_format = ffGetFormat;
@@ -251,6 +261,11 @@ namespace moonlight_xbox_dx {
 			return frame;
 		}
 		return nullptr;
+	}
+
+	bool FFMpegDecoder::IsHwAccelerated()
+	{
+		return decoder_ctx->hwaccel != nullptr;
 	}
 
 	//Helpers
