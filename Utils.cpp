@@ -5,6 +5,29 @@
 
 namespace moonlight_xbox_dx {
 	namespace Utils {
+		void StreamingStats::LoopStarted() {
+			QueryPerformanceCounter(&_loopStart);
+			_frameRenderedThisLoop = false;
+		}
+
+		void StreamingStats::FrameRendered() {
+			_frameRenderedThisLoop = true;
+		}
+
+		void StreamingStats::LoopEnded() {
+			LARGE_INTEGER end, frequency;
+			QueryPerformanceCounter(&end);
+			QueryPerformanceFrequency(&frequency);
+			double ms = 1000. * (end.QuadPart - _loopStart.QuadPart) / (float)(frequency.QuadPart);
+
+			accumulatedRenderToRenderMs += ms;
+
+			if (_frameRenderedThisLoop) {
+				renderToRenderMs = 0.5 * accumulatedRenderToRenderMs + 0.5 * renderToRenderMs;
+				accumulatedRenderToRenderMs = 0;
+			}
+		}
+
 		std::vector<std::wstring> logLines;
 		bool showLogs = false;
 		bool showStats = false;

@@ -56,6 +56,9 @@ void StatsRenderer::Update(DX::StepTimer const& timer)
 		m_text += L"AVG Rendering time: " + std::to_wstring(Utils::stats.averageRenderingTime) + L"ms \n";
 		m_text += L"Queue Size: " + std::to_wstring(Utils::stats.queueSize) + L"\n";
 		m_text += L"Composition Scale: " + std::to_wstring(Utils::stats.compositionScaleX) + L" - " + std::to_wstring(Utils::stats.compositionScaleX) + L" - " + std::to_wstring(Utils::stats.compositionScaleMultiplier) + L"\n";
+		m_text += L"Render Decode Loop: " + std::to_wstring(Utils::stats.renderDecodeLoopMs) + L"ms (" + std::to_wstring(1.0 / (Utils::stats.renderDecodeLoopMs / 1000.0)) + L"Hz) \n";
+		m_text += L"Render to Render: " + std::to_wstring(Utils::stats.renderToRenderMs) + L"ms (" + std::to_wstring(1.0 / (Utils::stats.renderToRenderMs / 1000.0)) + L"Hz) \n";
+		m_text += L"Present Time: " + std::to_wstring(Utils::stats.presentTime) + L"ms \n";
 	}
 }
 

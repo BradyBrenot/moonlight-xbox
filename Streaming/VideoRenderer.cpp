@@ -194,6 +194,7 @@ bool VideoRenderer::Render()
 	m_deviceResources->GetD3DDeviceContext()->DrawIndexed(6, 0, 0);
 	m_deviceResources->GetD3DDeviceContext()->Flush();
 	Utils::stats._framesDecoded++;
+	Utils::stats.FrameRendered();
 	UpdateStats(start);
 	return true;
 }

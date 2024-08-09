@@ -92,13 +92,19 @@ void moonlight_xbox_dxMain::StartRenderLoop()
 			// Calculate the updated frame and render once per vertical blanking interval.
 			while (action->Status == AsyncStatus::Started)
 			{
+				Utils::stats.LoopStarted();
+				Utils::ScopedStatTimer<> timer(Utils::stats.renderDecodeLoopMs);
+
 				critical_section::scoped_lock lock(m_criticalSection);
 				unsigned long long t1 = GetTickCount64();
 				Update();
 				if (Render())
 				{
+					Utils::ScopedStatTimer<> timer(Utils::stats.presentTime);
 					m_deviceResources->Present();
 				}
+
+				Utils::stats.LoopEnded();
 			}
 		});
 	m_renderLoopWorker = ThreadPool::RunAsync(workItemHandler, WorkItemPriority::High, WorkItemOptions::TimeSliced);

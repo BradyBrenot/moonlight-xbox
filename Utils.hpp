@@ -14,7 +14,56 @@ namespace moonlight_xbox_dx {
 			float compositionScaleX = 0;
 			float compositionScaleY = 0;
 			float compositionScaleMultiplier = 0;
+			double renderDecodeLoopMs = 0; // Average time to run the main loop
+			double renderToRenderMs = 0; // Average time between rendering frames (actual displayed FPS)
+			double presentTime = 0; // Average time to present a frame
+
+			void LoopStarted();
+			void FrameRendered();
+			void LoopEnded();
+
+		private:
+			bool _frameRenderedThisLoop = false;
+			LARGE_INTEGER _loopStart;
+			double accumulatedRenderToRenderMs = 0;
 		};
+
+		enum class TimerType { RunningAverage, Accumulate };
+
+		template<TimerType T = TimerType::RunningAverage>
+		class ScopedStatTimer {
+			ScopedStatTimer() = delete;
+			ScopedStatTimer(const ScopedStatTimer&) = delete;
+			ScopedStatTimer& operator=(const ScopedStatTimer&) = delete;
+
+			public:
+				ScopedStatTimer(double& statValue) : m_statValue(statValue) {
+					QueryPerformanceCounter(&m_start);
+				}
+
+				~ScopedStatTimer() {
+					LARGE_INTEGER end, frequency;
+					QueryPerformanceCounter(&end);
+					QueryPerformanceFrequency(&frequency);
+					double ms = 1000. * (end.QuadPart - m_start.QuadPart) / (float)(frequency.QuadPart);
+
+					m_statValue = 0.5 * ms + 0.5 * m_statValue;
+				}
+
+		private:
+				double& m_statValue;
+				LARGE_INTEGER m_start;
+		};
+
+		template<>
+		ScopedStatTimer<TimerType::Accumulate>::~ScopedStatTimer() {
+			LARGE_INTEGER end, frequency;
+			QueryPerformanceCounter(&end);
+			QueryPerformanceFrequency(&frequency);
+			double ms = 1000. * (end.QuadPart - m_start.QuadPart) / (float)(frequency.QuadPart);
+
+			m_statValue += ms;
+		}
 		
 		extern std::vector<std::wstring> logLines;
 		extern bool showLogs;
