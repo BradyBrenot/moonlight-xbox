@@ -359,8 +359,11 @@ bool moonlight_xbox_dxMain::Render()
 
 	bool shouldPresent = m_sceneRenderer->Render();
 	// Render the scene objects.
-	m_fpsTextRenderer->Render();
-	m_statsTextRenderer->Render();
+	{
+		Utils::ScopedStatTimer<> timer(Utils::stats.extraRenderMs);
+		m_fpsTextRenderer->Render();
+		m_statsTextRenderer->Render();
+	}
 
 	return shouldPresent;
 }

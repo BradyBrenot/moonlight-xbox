@@ -14,9 +14,13 @@ namespace moonlight_xbox_dx {
 			float compositionScaleX = 0;
 			float compositionScaleY = 0;
 			float compositionScaleMultiplier = 0;
+			double renderMs = 0;
+			double extraRenderMs = 0;
 			double renderDecodeLoopMs = 0; // Average time to run the main loop
 			double renderToRenderMs = 0; // Average time between rendering frames (actual displayed FPS)
 			double presentTime = 0; // Average time to present a frame
+			double fullRenderMs = 0; // Time to run Render with a valid frame (nothing skipped)
+			double fullRenderExtraRenderTimeMs = 0;
 			double renderToRenderSansPresentTimeMs = 0;
 
 			double waitForNextFrameMs = 0;

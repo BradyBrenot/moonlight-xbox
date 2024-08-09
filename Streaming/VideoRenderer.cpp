@@ -102,7 +102,8 @@ void UpdateStats(LARGE_INTEGER start) {
 	QueryPerformanceCounter(&end);
 	QueryPerformanceFrequency(&frequency);
 	//Update stats
-	double ms = (end.QuadPart - start.QuadPart) / (float)(frequency.QuadPart / 1000.0f);
+	const double ms = (end.QuadPart - start.QuadPart) / (float)(frequency.QuadPart / 1000.0f);
+	Utils::stats.renderMs = ms;
 	Utils::stats._accumulatedSeconds += ms;
 	if (Utils::stats._accumulatedSeconds >= 1000) {
 		Utils::stats.fps = Utils::stats._framesDecoded;
@@ -121,6 +122,7 @@ bool VideoRenderer::Render()
 	{
 		return true;
 	}
+
 	//Create a rendering texture
 	LARGE_INTEGER start;
 	QueryPerformanceCounter(&start);
