@@ -36,9 +36,17 @@ namespace moonlight_xbox_dx {
 				renderToRenderMs = 0.5 * accumulatedRenderToRenderMs + 0.5 * renderToRenderMs;
 				renderToRenderSansPresentTimeMs = renderToRenderMs - presentTime;
 				accumulatedRenderToRenderMs = 0;
-				overheadMs = renderToRenderMs - waitForNextFrameMs - decodeMs - receiveFrameMs - presentTime;
+				overheadMs = renderToRenderMs - waitForNextFrameSinceLastRenderMs - decodeSinceLastRenderMs - receiveFrameSinceLastRenderMs - presentTime;
 				fullRenderMs = 0.5 * renderMs + 0.5 * fullRenderMs;
 				fullRenderExtraRenderTimeMs = 0.5 * extraRenderMs + 0.5 * fullRenderExtraRenderTimeMs;
+
+				waitForNextFrameLoopMs = waitForNextFrameSinceLastRenderMs;
+				decodeLoopMs = decodeSinceLastRenderMs;
+				receiveFrameLoopMs = receiveFrameSinceLastRenderMs;
+
+				waitForNextFrameSinceLastRenderMs = 0;
+				decodeSinceLastRenderMs = 0;
+				receiveFrameSinceLastRenderMs = 0;
 			}
 		}
 

@@ -51,6 +51,7 @@ void StatsRenderer::Update(DX::StepTimer const& timer)
 	m_text = L"";
 	if (Utils::showStats) {
 		Windows::ApplicationModel::Package^ package = Windows::ApplicationModel::Package::Current;
+		m_text += "\n\n\n";
 		m_text += L"App Version: " + std::to_wstring(package->Id->Version.Major) + L"." + std::to_wstring(package->Id->Version.Minor) + L"." + std::to_wstring(package->Id->Version.Build) + L"." + std::to_wstring(package->Id->Version.Revision) + L"\n";
 		m_text += L"Window Size: " + std::to_wstring(Utils::stats.outputW) + L" x " + std::to_wstring(Utils::stats.outputH) + L"\n";
 		m_text += L"AVG Rendering time: " + std::to_wstring(Utils::stats.averageRenderingTime) + L"ms \n";
@@ -61,14 +62,22 @@ void StatsRenderer::Update(DX::StepTimer const& timer)
 		m_text += L"Present Time: " + std::to_wstring(Utils::stats.presentTime) + L"ms \n";
 		m_text += L"Render to Render (sans present time): " + std::to_wstring(Utils::stats.renderToRenderSansPresentTimeMs) + L"ms \n";
 		m_text += L"Overhead: " + std::to_wstring(Utils::stats.overheadMs) + L"ms \n";
+
+		m_text += L"Wait for Next Frame: " + std::to_wstring(Utils::stats.waitForNextFrameLoopMs) + L"ms \n";
+		m_text += L"Decode: " + std::to_wstring(Utils::stats.decodeLoopMs) + L"ms \n";
+		m_text += L"Receive Frame: " + std::to_wstring(Utils::stats.receiveFrameLoopMs) + L"ms \n";
 		m_text += L"Full Render avg.: " + std::to_wstring(Utils::stats.fullRenderMs) + L"ms \n";
-		m_text += L"Full Render Extra Render Time: " + std::to_wstring(Utils::stats.fullRenderExtraRenderTimeMs) + L"ms \n";
+		m_text += L"Extras Rendering Time: " + std::to_wstring(Utils::stats.fullRenderExtraRenderTimeMs) + L"ms \n";
 	}
 }
 
 // Renders a frame to the screen.
 void StatsRenderer::Render()
 {
+	if (!Utils::showStats) {
+		return;
+	}
+
 	ComPtr<IDWriteTextLayout> textLayout;
 	DX::ThrowIfFailed(
 		m_deviceResources->GetDWriteFactory()->CreateTextLayout(

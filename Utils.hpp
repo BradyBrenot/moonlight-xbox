@@ -28,6 +28,14 @@ namespace moonlight_xbox_dx {
 			double receiveFrameMs = 0;
 			double overheadMs = 0;
 
+			double waitForNextFrameSinceLastRenderMs = 0;
+			double decodeSinceLastRenderMs = 0;
+			double receiveFrameSinceLastRenderMs = 0;
+
+			double waitForNextFrameLoopMs = 0;
+			double decodeLoopMs = 0;
+			double receiveFrameLoopMs = 0;
+
 			void LoopStarted();
 			void GotPacket();
 			void GotFrame();
@@ -51,7 +59,7 @@ namespace moonlight_xbox_dx {
 			ScopedStatTimer& operator=(const ScopedStatTimer&) = delete;
 
 			public:
-				ScopedStatTimer(double& statValue) : m_statValue(statValue) {
+				ScopedStatTimer(double& statValue, double* accumulator = nullptr) : m_statValue(statValue), m_accumulator(accumulator) {
 					QueryPerformanceCounter(&m_start);
 				}
 
@@ -62,10 +70,16 @@ namespace moonlight_xbox_dx {
 					double ms = 1000. * (end.QuadPart - m_start.QuadPart) / (float)(frequency.QuadPart);
 
 					m_statValue = 0.5 * ms + 0.5 * m_statValue;
+
+					if (m_accumulator != nullptr)
+					{
+						*m_accumulator += ms;
+					}
 				}
 
 		private:
 				double& m_statValue;
+				double* m_accumulator;
 				LARGE_INTEGER m_start;
 		};
 

@@ -190,7 +190,7 @@ namespace moonlight_xbox_dx {
 		VIDEO_FRAME_HANDLE frameHandle = nullptr;
 		bool status;
 		{
-			Utils::ScopedStatTimer<> waitForFrameTimer(Utils::stats.waitForNextFrameMs);
+			Utils::ScopedStatTimer<> waitForFrameTimer(Utils::stats.waitForNextFrameMs, &Utils::stats.waitForNextFrameSinceLastRenderMs);
 			status = LiWaitForNextVideoFrame(&frameHandle, &decodeUnit);
 		}
 		if (status == false) return false;
@@ -229,7 +229,7 @@ namespace moonlight_xbox_dx {
 		unsigned long long ts = GetTickCount64();
 
 		{
-			Utils::ScopedStatTimer<> decodeTimer(Utils::stats.decodeMs);
+			Utils::ScopedStatTimer<> decodeTimer(Utils::stats.decodeMs, &Utils::stats.decodeSinceLastRenderMs);
 			err = avcodec_send_packet(decoder_ctx, &pkt);
 		}
 		
@@ -247,7 +247,7 @@ namespace moonlight_xbox_dx {
 	AVFrame* FFMpegDecoder::GetFrame() {
 		int err;
 		{
-			Utils::ScopedStatTimer<> decodeTimer(Utils::stats.receiveFrameMs);
+			Utils::ScopedStatTimer<> decodeTimer(Utils::stats.receiveFrameMs, &Utils::stats.receiveFrameSinceLastRenderMs);
 			err = avcodec_receive_frame(decoder_ctx, dec_frames[next_frame]);
 		}
 		

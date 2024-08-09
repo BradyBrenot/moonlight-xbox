@@ -63,6 +63,10 @@ void LogRenderer::Update(DX::StepTimer const& timer)
 // Renders a frame to the screen.
 void LogRenderer::Render()
 {
+	if (!Utils::showLogs) {
+		return;
+	}
+
 	ComPtr<IDWriteTextLayout> textLayout;
 	DX::ThrowIfFailed(
 		m_deviceResources->GetDWriteFactory()->CreateTextLayout(
